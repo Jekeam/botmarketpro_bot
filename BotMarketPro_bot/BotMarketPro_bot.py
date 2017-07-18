@@ -1,29 +1,101 @@
 # coding: utf8
 import telebot
 import re
-from telebot import types
-import config as app
+import config as prop
 import time
+import botan
+from telebot import types
+
+bot = telebot.TeleBot(prop.token)
 
 
-bot = telebot.TeleBot(app.token)
-
-
-#Команда START
-@bot.message_handler(commands=['start','reset'])
+# Команда START
+@bot.message_handler(commands=['start'])
 def cmd_start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn_order = types.KeyboardButton(app.btn_make_order) # Копка оформить заказ
-    btn_ask = types.KeyboardButton(app.btn_ask_question) # Копка задать вопрос
-    markup.add(btn_order, btn_ask)
-    bot.send_message(message.chat.id, app.msg_hi, reply_markup=markup)
+    btn_order = types.KeyboardButton(prop.btn_make_order) # Копка оформить заказ
+    btn_ask = types.KeyboardButton(prop.btn_ask_question) # Копка задать вопрос
+    markup.add(btn_order)
+    markup.add(btn_ask)
+    bot.send_message(message.chat.id, prop.msg_hi, reply_markup=markup)
+    botan.track(prop.botan_key, message.chat.id, message)
+
+
+# Команда HELP
+@bot.message_handler(commands=['help'])
+def cmd_help(message):
+    botan.track(prop.botan_key, message.chat.id, message, '/help')
+
+
+#Команда SETTINGS
+@bot.message_handler(commands=['settings'])
+def cmd_settings(message):
+    botan.track(prop.botan_key, message.chat.id, message, '/settings')
+
+
+# Получаем от клиента описание заказа (вызвано из order_guide)
+def get_order_desc(order_desc):        
+    print('Описание заказа: ' + order_desc)    
+
+# Если сообщение не удалось обработать
+def no_data_found(message):
+    bot.reply_to(message, prop.msg_not_found)
+    botan.track(prop.botan_key, message.chat.id, message, 'no_data_found')
 
 
 # Если ненашли ничего!
-@bot.message_handler(func=lambda message: True)
-def cmd_start(message):
-    bot.reply_to(message, app.msg_not_found)
-    
+@bot.message_handler(func=lambda message: True, content_types = ['text'])
+def check_answer(message):
+    msg_text = message.text
+    chat_id = message.chat.id    
+    # нажал "оформить заказ"
+    if msg_text == prop.btn_make_order:
+        # Пожалуйста, введите краткое описание заказа            
+        markup = types.ForceReply()
+        bot.send_message(chat_id, prop.msg_order_desc, reply_markup = markup)
+        botan.track(prop.botan_key, chat_id, message, prop.btn_make_order)
+    # нажал "отменить заказ"
+    elif msg_text == prop.btn_order_cancel:
+        bot.send_message(chat_id, prop.msg_order_cancel)
+        botan.track(prop.botan_key, message.chat.id, message, prop.msg_order_cancel)
+        cmd_start(message)        
+    # ответ на ранее заданный вопрос, по описанию заказа
+    elif message.reply_to_message and message.reply_to_message.text == prop.msg_order_desc:        
+        # Запишем описание заказа
+        get_order_desc(message.text)
+        # Добавим возможность выйти из режима оформления заказа
+        keyboard = types.ReplyKeyboardMarkup(resize_keyboard = True)
+        btn_order_cancel = types.KeyboardButton(prop.btn_order_cancel) # Копка "отменить заказ"
+        btn_order_telephone = types.KeyboardButton(prop.btn_phone, request_contact = True) # Копка "Предоставить телефон"
+        keyboard.add(btn_order_telephone)        
+        keyboard.add(btn_order_cancel)
+        bot.send_message(chat_id, prop.msg_your_contact, reply_markup = keyboard)
+    elif msg_text == prop.btn_phone:
+        botan.track(prop.botan_key, message.chat.id, message, prop.btn_phone)
+        print(str(message))
+    else:
+        print('no_data_found:' + msg_text)
+        no_data_found(message)
+
+
+# Получаем контакт клиента
+@bot.message_handler(content_types = ['contact'])
+def get_phone(message):
+    # проверим что жалкий людишка не обманул нас, и не отправил левый телефон?
+    if message.from_user.id == message.contact.user_id:
+        print('ok')
+        print(str(message))
+    else:
+        print('!ok')
+        keyboard_confirm = types.ReplyKeyboardMarkup(resize_keyboard = True)
+        btn_yes = types.KeyboardButton(prop.btn_yes) # Копка "Да"
+        btn_no = types.KeyboardButton(prop.btn_no) # Копка "Нет"
+        keyboard_confirm.add(btn_yes, btn_no)
+        bot.send_message(message.chat.id, 
+                         prop.msg_confirm_phone.format(str(message.contact.phone_number)), 
+                         reply_markup = keyboard_confirm)
+        print(str(message))    
+
 
 # Запуск скрипта
 if __name__ == '__main__':

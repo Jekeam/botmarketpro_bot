@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="botan.py" />
     <Compile Include="BotMarketPro_bot.py" />
     <Compile Include="config.py">
       <SubType>Code</SubType>
