@@ -8,6 +8,8 @@ from telebot import types
 
 bot = telebot.TeleBot(prop.token)
 
+# Определяем общие кнопки
+btn_order_cancel = types.KeyboardButton(prop.btn_order_cancel) # Копка "отменить заказ"
 
 # Команда START
 @bot.message_handler(commands=['start'])
@@ -34,23 +36,35 @@ def cmd_settings(message):
 
 
 # Получаем от клиента описание заказа (вызвано из order_guide)
-def get_order_desc(order_desc):        
-    print('Описание заказа: ' + order_desc)    
+def get_order_desc(order_desc):
+    print('Описание заказа: ' + order_desc)
+
+def get_budget(message):
+    botan.track(prop.botan_key, message.chat.id, message, prop.btn_skip)
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width = 2)
+    btn_4k = types.KeyboardButton(prop.btn_4k)
+    btn_10k = types.KeyboardButton(prop.btn_10k)
+    btn_20k = types.KeyboardButton(prop.btn_20k)
+    btn_30k = types.KeyboardButton(prop.btn_30k)
+    keyboard.add(btn_4k, btn_10k)
+    keyboard.add(btn_20k, btn_30k)
+    keyboard.add(btn_order_cancel)
+    bot.send_message(message.chat.id, prop.msg_budget, reply_markup = keyboard)
+
 
 # Если сообщение не удалось обработать
 def no_data_found(message):
     bot.reply_to(message, prop.msg_not_found)
     botan.track(prop.botan_key, message.chat.id, message, 'no_data_found')
 
-
 # Если ненашли ничего!
 @bot.message_handler(func=lambda message: True, content_types = ['text'])
 def check_answer(message):
     msg_text = message.text
-    chat_id = message.chat.id    
+    chat_id = message.chat.id
     # нажал "оформить заказ"
     if msg_text == prop.btn_make_order:
-        # Пожалуйста, введите краткое описание заказа            
+        # Пожалуйста, введите краткое описание заказа
         markup = types.ForceReply()
         bot.send_message(chat_id, prop.msg_order_desc, reply_markup = markup)
         botan.track(prop.botan_key, chat_id, message, prop.btn_make_order)
@@ -60,16 +74,20 @@ def check_answer(message):
         botan.track(prop.botan_key, message.chat.id, message, prop.msg_order_cancel)
         cmd_start(message)        
     # ответ на ранее заданный вопрос, по описанию заказа
-    elif message.reply_to_message and message.reply_to_message.text == prop.msg_order_desc:        
+    elif message.reply_to_message and message.reply_to_message.text == prop.msg_order_desc:
         # Запишем описание заказа
         get_order_desc(message.text)
         # Добавим возможность выйти из режима оформления заказа
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard = True)
-        btn_order_cancel = types.KeyboardButton(prop.btn_order_cancel) # Копка "отменить заказ"
         btn_order_telephone = types.KeyboardButton(prop.btn_phone, request_contact = True) # Копка "Предоставить телефон"
-        keyboard.add(btn_order_telephone)        
+        btn_skip = types.KeyboardButton(prop.btn_skip) # Копка "Пропустить"
+        keyboard.add(btn_order_telephone)
+        keyboard.add(btn_skip)
         keyboard.add(btn_order_cancel)
         bot.send_message(chat_id, prop.msg_your_contact, reply_markup = keyboard)
+    # нажали "Пропустить"
+    elif msg_text == prop.btn_skip:
+        get_budget(message)
     elif msg_text == prop.btn_phone:
         botan.track(prop.botan_key, message.chat.id, message, prop.btn_phone)
         print(str(message))
@@ -83,18 +101,18 @@ def check_answer(message):
 def get_phone(message):
     # проверим что жалкий людишка не обманул нас, и не отправил левый телефон?
     if message.from_user.id == message.contact.user_id:
-        print('ok')
         print(str(message))
+        get_budget(message)
     else:
-        print('!ok')
         keyboard_confirm = types.ReplyKeyboardMarkup(resize_keyboard = True)
         btn_yes = types.KeyboardButton(prop.btn_yes) # Копка "Да"
         btn_no = types.KeyboardButton(prop.btn_no) # Копка "Нет"
         keyboard_confirm.add(btn_yes, btn_no)
-        bot.send_message(message.chat.id, 
-                         prop.msg_confirm_phone.format(str(message.contact.phone_number)), 
+        bot.send_message(message.chat.id,
+                         prop.msg_confirm_phone.format(str(message.contact.phone_number)),
                          reply_markup = keyboard_confirm)
-        print(str(message))    
+        print(str(message))
+        get_budget(message)
 
 
 # Запуск скрипта
