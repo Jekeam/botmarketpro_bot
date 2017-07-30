@@ -5,9 +5,11 @@ import config as prop
 import time
 import botan
 from telebot import types
-import sqlite3
+import db_utils as db
+
 
 bot = telebot.TeleBot(prop.token)
+
 
 # Определяем общие кнопки
 btn_order_cancel = types.KeyboardButton(prop.btn_order_cancel) # Копка "отменить заказ"
@@ -16,43 +18,22 @@ btn_order_cancel = types.KeyboardButton(prop.btn_order_cancel) # Копка "о�
 # Команда CREATE_DB
 @bot.message_handler(commands=['create_db'])
 def create_db(message):
-    conn = sqlite3.connect(prop.db)    
-    # Создаем файл и таблицу юзеров
-    try:
-        conn.execute('''create table users(
-                         id         int  primary key not null,
-                         username   text not null,
-                         first_name text,
-                         last_name  text,
-                         email      text,
-                         phone      text,
-                         language   text);
-                    ''')
-        print("Table users created successfully");
-    except Exception as exc:
-        print("Table created users fail: " + str(exc));
-    # Создаем таблицу шагов юзера, чтоб знать без ебеней где он находится
-    try:
-        conn.execute('''create table guide(
-                         user_id   int primary key not null,
-                         cur_step  int,
-                         next_step int,
-                         back_step int);
-                    ''')
-        print("Table created guide successfully");
-    except Exception as exc:
-        print("Table created guide fail: " + str(exc));
-    conn.close()
+    db_worker = db.SQLighter(prop.db)
+    db_worker.create_db()
+
 
 # Команда START
 @bot.message_handler(commands=['start'])
 def cmd_start(message):
+    db_worker = db.SQLighter(prop.db)
+    db_worker.user_add(message)
+    first_name = message.chat.first_name
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn_order = types.KeyboardButton(prop.btn_make_order) # Копка оформить заказ
     btn_ask = types.KeyboardButton(prop.btn_ask_question) # Копка задать вопрос
     markup.add(btn_order)
     markup.add(btn_ask)
-    bot.send_message(message.chat.id, prop.msg_hi, reply_markup=markup)
+    bot.send_message(message.chat.id, prop.msg_hi.format(first_name), reply_markup=markup)
     botan.track(prop.botan_key, message.chat.id, message)
 
 
@@ -151,4 +132,4 @@ def get_phone(message):
 # Запуск скрипта
 if __name__ == '__main__':
     print('start')
-    bot.polling(none_stop = True, interval = 2)
+    bot.polling(none_stop = True)

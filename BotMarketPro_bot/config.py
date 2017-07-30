@@ -1,9 +1,10 @@
+# coding: utf8
 token = '276053601:AAFOcZy9_f1E6UpMyy3Tlrk-eZMtdmOvVVs'
 botan_key = '119cdaf8-3dc9-4427-b0ba-c4f1a27e63a9'
 db = 'BotMarketPro.db'
 
 # ТЕКСТ
-msg_hi = 'Чем я могу Вам помочь?'
+msg_hi = 'Привет {}! Чем я могу Вам помочь?'
 msg_not_found = "Я Вас не понимаю... Пожалуйста, выберети действие"
 msg_order_desc = 'Пожалуйста, введите краткое описание заказа'
 msg_order_cancel = 'Ваш заказ отменен'
