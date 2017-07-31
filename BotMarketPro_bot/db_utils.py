@@ -6,7 +6,10 @@ import config as prop
 # объявим константы
 T_USERS = 'users'
 T_GUIDE = 'guide'
+T_ORDERS = 'orders'
 T_USER_COLUMNS = '(id, username, first_name, last_name, email, phone, language)'
+T_GUIDE_COLUMNS = '(user_id, step)'
+T_ORDERS_COLUMNS = '(user_id, chat_id, desc, price, dedline, phone, email)'
 
 
 class SQLighter:
@@ -35,32 +38,88 @@ class SQLighter:
         try:
             conn.execute('''create table ''' + T_GUIDE + '''(
                              user_id   int primary key not null,
-                             cur_step  int,
-                             next_step int,
-                             back_step int);
+                             step  int);
                         ''')
             print("Table created " + T_GUIDE + " successfully")
         except Exception as exc:
             print("Table created " + T_GUIDE + " fail: " + str(exc))
+        # Создаем таблицу заказов        
+        try:
+            conn.execute('''create table ''' + T_ORDERS + '''(
+                             user_id int  primary key not null,
+                             chat_id int,
+                             desc text,
+                             price text,
+                             dedline text,
+                             phone text,
+                             email text);
+                        ''')
+            print("Table " + T_ORDERS + " created successfully")
+        except Exception as exc:
+            print("Table created " + T_ORDERS + " fail: " + str(exc))
         conn.close()
 
     def user_add(self, message):
         # Добавление нового пользователя в БД
         if self.connection:
             user_id = str(message.from_user.id)
-            username = str("'"+message.from_user.username+"'")
-            first_name = str("'"+message.from_user.first_name+"'")
-            last_name = str("'"+message.from_user.last_name+"'")
-            language_code = str("'"+message.from_user.language_code+"'")
+            username = str("'" + message.from_user.username + "'")
+            first_name = str("'" + message.from_user.first_name + "'")
+            last_name = str("'" + message.from_user.last_name + "'")
+            language_code = str("'" + message.from_user.language_code + "'")
             if user_id:
-                sql_text = "select id from "+T_USERS+" where id = "+user_id
-                print(sql_text)
+                sql_text = "select id from " + T_USERS + " where id = " + user_id
                 res = self.connection.execute(sql_text)
                 for v_res in res:
-                    print('Юзер в базе ' + str(v_res))
-                    return
-                sql_text = "insert into " + T_USERS + T_USER_COLUMNS +"\
-                            values (" + user_id + ", " + username + ", " + first_name + ", " + last_name + ", null, null, " + language_code + ") "
-                print(sql_text)
-                self.connection.execute(sql_text);
+                    return v_res[0]
+                sql_text = "insert into " + T_USERS + T_USER_COLUMNS + "\
+                            values (" + user_id + ", " + username + ", " + first_name + ", " + last_name + ", null, null, " + language_code + ")"
+                self.connection.execute(sql_text)
                 self.connection.commit()
+                sql_text = "insert into " + T_GUIDE + T_GUIDE_COLUMNS + "\
+                            values (" + user_id + ", '1')"
+                self.connection.execute(sql_text)
+                self.connection.commit()
+                return user_id
+
+
+    def set_order(self, user_id):
+        sql_text = "select user_id from " + T_ORDERS + " where user_id = " + str(user_id)
+        res = self.connection.execute(sql_text)
+        for v_res in res:
+            return v_res[0]
+        sql_text = "insert into " + T_ORDERS + " user_id\
+                    values (" + str(user_id) + ")"
+        self.connection.execute(sql_text)
+        self.connection.commit()
+
+
+    def update_order(self, user_id):
+        sql_text = "select user_id from " + T_ORDERS + " where user_id = " + str(user_id)
+        res = self.connection.execute(sql_text)
+        for v_res in res:
+            return v_res[0]
+        sql_text = "insert into " + T_ORDERS + " user_id\
+                    values (" + str(user_id) + ")"
+        self.connection.execute(sql_text)
+        self.connection.commit()
+
+
+    def get_step(self, user_id):
+        sql_text = "select step from " + T_GUIDE + " where user_id = " + str(user_id)
+        res = self.connection.execute(sql_text)
+        if res:
+            for v_res in res:
+                return str(v_res[0])
+        sql_text = "insert into " + T_GUIDE + T_GUIDE_COLUMNS + "\
+                    values (" + str(user_id) + ", '1')"
+        self.connection.execute(sql_text)
+        self.connection.commit()
+        return(1)
+
+
+    def step_update(self, user_id, step):
+        sql_text = "update " + T_GUIDE + " set step = " + str(step) + "\
+                    where user_id = " + str(user_id)
+        self.connection.execute(sql_text)
+        self.connection.commit()
