@@ -44,9 +44,11 @@ class SQLighter:
         except Exception as exc:
             print("Table created " + T_GUIDE + " fail: " + str(exc))
         # Создаем таблицу заказов        
-        try:
+        try:# статусы: 1-в процессе оформления / 2-готов / 3-в работе / 4-закрыт /-1 отменен
             conn.execute('''create table ''' + T_ORDERS + '''(
-                             user_id int  primary key not null,
+                             id integer primary key autoincrement,
+                             status int not null,
+                             user_id int not null,
                              chat_id int,
                              desc text,
                              price text,
@@ -84,25 +86,51 @@ class SQLighter:
 
 
     def set_order(self, user_id):
-        sql_text = "select user_id from " + T_ORDERS + " where user_id = " + str(user_id)
-        res = self.connection.execute(sql_text)
-        for v_res in res:
-            return v_res[0]
-        sql_text = "insert into " + T_ORDERS + " user_id\
-                    values (" + str(user_id) + ")"
+        sql_text = "insert into " + T_ORDERS + " (status, user_id)\
+                    values ( 1, " + str(user_id) + ");"
         self.connection.execute(sql_text)
         self.connection.commit()
-
-
-    def update_order(self, user_id):
-        sql_text = "select user_id from " + T_ORDERS + " where user_id = " + str(user_id)
-        res = self.connection.execute(sql_text)
-        for v_res in res:
+        sql_text = "select max(id) from " + T_ORDERS + " where status = 1 and user_id = " + str(user_id)
+        order_id = self.connection.execute(sql_text)
+        for v_res in order_id:
             return v_res[0]
-        sql_text = "insert into " + T_ORDERS + " user_id\
-                    values (" + str(user_id) + ")"
+
+
+    # получить заказ, кторый в процессе оформления
+    def get_order(self, user_id):
+        sql_text = "select max(id) from " + T_ORDERS + " where status = 1 and user_id = " + str(user_id)
+        order_id = self.connection.execute(sql_text)
+        for v_res in order_id:
+            return v_res[0]
+
+
+    def update_order(self, order_id, **kwargs):
+        for key in kwargs:
+            if key == 'desc':
+                sql_text = "update " + T_ORDERS + " set desc = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            elif key == 'price':
+                sql_text = "update " + T_ORDERS + " set price = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            elif key == 'dedline':
+                sql_text = "update " + T_ORDERS + " set dedline = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            elif key == 'phone':
+                sql_text = "update " + T_ORDERS + " set phone = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            elif key == 'email':
+                sql_text = "update " + T_ORDERS + " set email = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            elif key == 'status':
+                sql_text = "update " + T_ORDERS + " set status = '" + str(kwargs[key]) + "' \
+                            where id = " + str(order_id) + ";"
+            else:
+                pass
+                return
         self.connection.execute(sql_text)
         self.connection.commit()
+        #self.connection.execute(sql_text)
+        #self.connection.commit()
 
 
     def get_step(self, user_id):
