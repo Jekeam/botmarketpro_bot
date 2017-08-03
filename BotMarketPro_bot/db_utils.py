@@ -9,7 +9,7 @@ T_GUIDE = 'guide'
 T_ORDERS = 'orders'
 T_USER_COLUMNS = '(id, username, first_name, last_name, email, phone, language)'
 T_GUIDE_COLUMNS = '(user_id, step)'
-T_ORDERS_COLUMNS = '(user_id, chat_id, desc, price, dedline, phone, email)'
+T_ORDERS_COLUMNS = 'user_id, chat_id, desc, price, dedline, phone, email'
 
 
 class SQLighter:
@@ -43,8 +43,9 @@ class SQLighter:
             print("Table created " + T_GUIDE + " successfully")
         except Exception as exc:
             print("Table created " + T_GUIDE + " fail: " + str(exc))
-        # Создаем таблицу заказов        
-        try:# статусы: 1-в процессе оформления / 2-готов / 3-в работе / 4-закрыт /-1 отменен
+        # Создаем таблицу заказов
+        try:# статусы: 1-в процессе оформления / 2-готов / 3-в работе / 4-закрыт /-1
+            # отменен
             conn.execute('''create table ''' + T_ORDERS + '''(
                              id integer primary key autoincrement,
                              status int not null,
@@ -95,6 +96,17 @@ class SQLighter:
         for v_res in order_id:
             return v_res[0]
 
+    def get_fill_order(self, order_id):
+        sql_text = "select " + T_ORDERS_COLUMNS + " from " + T_ORDERS + " where id = " + str(order_id)
+        print(sql_text)
+        res = self.connection.execute(sql_text)
+        for val in res:
+            return 'Заказ №'+str(order_id)+' успешно принят!\n\n'\
+                    'Описание заказа: '+str(val[2])+'\n'\
+                    'Цена: '+str(val[3])+'\n'\
+                    'Срок: '+str(val[4])+'\n'\
+                    'Телефон: '+str(val[5])+'\n'\
+                    'Е-mail: '+str(val[5])+'\n'\
 
     # получить заказ, кторый в процессе оформления
     def get_order(self, user_id):
